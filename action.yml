@@ -1,0 +1,28 @@
+name: 'QA Advisor — PR Test Coverage Analysis'
+description: 'Automatically analyzes PR diffs and comments with test scenarios reviewers should check. 17 change patterns detected.'
+author: 'IK Lab'
+
+branding:
+  icon: 'check-circle'
+  color: 'purple'
+
+inputs:
+  github-token:
+    description: 'GitHub token for API access. Pass secrets.GITHUB_TOKEN in workflow.'
+    required: true
+  min-priority:
+    description: 'Minimum priority to include in comment: must-test, should-test, or nice-to-test'
+    required: false
+    default: 'nice-to-test'
+
+outputs:
+  scenarios-count:
+    description: 'Total number of test scenarios found'
+  risk-level:
+    description: 'Overall risk level: low, medium, or high'
+  summary:
+    description: 'One-line summary of the analysis'
+
+runs:
+  using: 'node20'
+  main: 'dist/index.js'

@@ -1,0 +1,33 @@
+{
+  "name": "qa-advisor-action",
+  "version": "1.0.0",
+  "description": "GitHub Action: PR test coverage analysis. Detects 17 change patterns and posts test scenarios reviewers should check. Local heuristic — no LLM, no API keys, no external services.",
+  "author": "Ihor Kosheliev <sneggg8@gmail.com> (IK Lab)",
+  "license": "MIT",
+  "homepage": "https://github.com/i-kosheliev/qa-advisor-action#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/i-kosheliev/qa-advisor-action.git"
+  },
+  "bugs": {
+    "url": "https://github.com/i-kosheliev/qa-advisor-action/issues"
+  },
+  "keywords": [
+    "actions",
+    "github-action",
+    "pull-request",
+    "pr-review",
+    "code-review",
+    "testing",
+    "qa",
+    "test-coverage",
+    "test-scenarios",
+    "quality-assurance",
+    "ci"
+  ],
+  "main": "dist/index.js",
+  "private": false,
+  "engines": {
+    "node": ">=20"
+  }
+}
