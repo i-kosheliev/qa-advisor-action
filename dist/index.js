@@ -40061,6 +40061,67 @@ var require_pr_test_advisor = __commonJS({
         reason: "Date/time logic was modified \u2014 timezone and DST bugs are a classic source of flaky tests",
         priority: "should-test",
         category: "edge-case"
+      },
+      // ─── Caching ────────────────────────────────────────
+      {
+        id: "cache-invalidation",
+        linePatterns: [
+          "cache.set(",
+          "cache.delete(",
+          "cache.clear(",
+          "revalidatePath(",
+          "revalidateTag(",
+          "unstable_cache",
+          "cacheLife(",
+          "cacheTag(",
+          "updateTag(",
+          "redis.set",
+          "redis.del",
+          "memcache"
+        ],
+        scenario: "Verify cache invalidation fires on every mutation path \u2014 stale cache is silent: reads look fine, writes don't propagate until TTL. Test the specific tag/path being invalidated actually maps to the cached entry",
+        reason: "Cache read/write/invalidate code changed \u2014 mismatched tag or path = stale data",
+        priority: "must-test",
+        category: "regression"
+      },
+      // ─── Feature flags / experiments ────────────────────
+      {
+        id: "feature-flag",
+        linePatterns: [
+          "featureFlag",
+          "isEnabled(",
+          "growthbook",
+          "launchDarkly",
+          "flagOn(",
+          "getVariant(",
+          "getBooleanValue",
+          "experiment(",
+          "variation(",
+          "unleash.",
+          "posthog.isFeatureEnabled"
+        ],
+        scenario: "Test BOTH the on and off branches of the flag, not just the happy path. Verify graceful behavior when the flag service is unreachable \u2014 code should default to a known path, not crash",
+        reason: "Feature flag check added/modified \u2014 both variants and the fallback path need coverage",
+        priority: "should-test",
+        category: "edge-case"
+      },
+      // ─── XSS / dangerous sinks ──────────────────────────
+      {
+        id: "dangerous-sink",
+        linePatterns: [
+          "dangerouslySetInnerHTML",
+          "innerHTML",
+          "outerHTML",
+          "document.write(",
+          "eval(",
+          "new Function(",
+          "setAttribute('srcdoc'",
+          "insertAdjacentHTML"
+        ],
+        scenario: "Verify every value reaching this sink is either a trusted constant or escaped/sanitized \u2014 an untrusted string here is a direct XSS. Add a test with an attacker-controlled payload (e.g. '<img onerror=...>') and assert it's rendered inert",
+        reason: "Dangerous HTML/script sink added \u2014 untrusted data here = XSS / arbitrary code execution",
+        priority: "must-test",
+        category: "security"
       }
     ];
     function isNonCodeFile(path) {

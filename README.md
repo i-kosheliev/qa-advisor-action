@@ -1,6 +1,6 @@
 # QA Advisor — GitHub Action for PR Test Coverage Analysis
 
-Automatically analyzes PR diffs and comments with test scenarios reviewers should check. Detects **22 change patterns** (auth, payments, env vars, GraphQL schemas, file I/O, date/time, etc.) and classifies each as `must-test`, `should-test`, or `nice-to-test`.
+Automatically analyzes PR diffs and comments with test scenarios reviewers should check. Detects **25 change patterns** (auth, payments, env vars, GraphQL schemas, file I/O, date/time, etc.) and classifies each as `must-test`, `should-test`, or `nice-to-test`.
 
 Local heuristic — **no LLM calls, no API keys, no external services**. Runs instantly in CI.
 
@@ -97,7 +97,7 @@ Use outputs in follow-up steps:
 
 ## What it detects
 
-22 change patterns across 6 categories:
+25 change patterns across 6 categories:
 
 | Category | Example patterns |
 |----------|------------------|

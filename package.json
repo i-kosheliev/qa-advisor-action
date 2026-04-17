@@ -1,7 +1,7 @@
 {
   "name": "@iklab/qa-advisor-action",
-  "version": "1.1.0",
-  "description": "GitHub Action: PR test coverage analysis. Detects 22 change patterns, posts test scenarios on PRs. Local heuristic — no LLM, no API keys.",
+  "version": "1.2.0",
+  "description": "GitHub Action: PR test coverage analysis. Detects 25 change patterns, posts test scenarios on PRs. Local heuristic — no LLM, no API keys.",
   "author": "Ihor Kosheliev <sneggg8@gmail.com>",
   "license": "MIT",
   "homepage": "https://iklab.dev",

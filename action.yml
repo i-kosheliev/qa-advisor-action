@@ -1,5 +1,5 @@
 name: 'QA Advisor — PR Test Coverage Analysis'
-description: 'Automatically analyzes PR diffs and comments with test scenarios reviewers should check. 22 change patterns detected.'
+description: 'Automatically analyzes PR diffs and comments with test scenarios reviewers should check. 25 change patterns detected.'
 author: 'IK Lab'
 
 branding:
