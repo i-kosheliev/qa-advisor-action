@@ -39857,6 +39857,7 @@ var require_pr_test_advisor = __commonJS({
   "../core/dist/pr-test-advisor.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
+    exports2.isNonCodeFile = isNonCodeFile;
     exports2.advisePrTests = advisePrTests2;
     function parseDiff(diff) {
       const files = [];
@@ -40016,6 +40017,28 @@ var require_pr_test_advisor = __commonJS({
         category: "regression"
       }
     ];
+    function isNonCodeFile(path) {
+      const lower = path.toLowerCase();
+      if (lower.startsWith(".github/workflows/") && (lower.endsWith(".yml") || lower.endsWith(".yaml"))) {
+        return true;
+      }
+      if (/(^|\/)(package-lock\.json|yarn\.lock|pnpm-lock\.yaml|bun\.lockb|composer\.lock|gemfile\.lock|poetry\.lock|cargo\.lock|go\.sum)$/i.test(lower)) {
+        return true;
+      }
+      if (/\.(md|mdx|txt|rst|adoc)$/.test(lower)) {
+        return true;
+      }
+      if (/(^|\/)(license|notice|authors|contributors|changelog|readme|codeowners)(\.[a-z]+)?$/i.test(lower)) {
+        return true;
+      }
+      if (/(^|\/)\.(gitignore|gitattributes|editorconfig|prettierignore|eslintignore|npmignore|dockerignore|nvmrc|node-version)$/i.test(lower)) {
+        return true;
+      }
+      if (/\.(png|jpe?g|gif|svg|ico|webp|avif|bmp|tiff?)$/i.test(lower)) {
+        return true;
+      }
+      return false;
+    }
     function advisePrTests2(input) {
       const files = parseDiff(input.diff);
       if (files.length === 0) {
@@ -40032,8 +40055,9 @@ var require_pr_test_advisor = __commonJS({
       for (const file of files) {
         const allLines = [...file.addedLines, ...file.removedLines].join("\n").toLowerCase();
         const filePath = file.path.toLowerCase();
+        const nonCode = isNonCodeFile(file.path);
         for (const pattern of CHANGE_PATTERNS) {
-          const lineMatch = pattern.linePatterns?.some((p) => allLines.includes(p.toLowerCase()));
+          const lineMatch = !nonCode && pattern.linePatterns?.some((p) => allLines.includes(p.toLowerCase()));
           const pathMatch = pattern.pathPatterns?.some((p) => filePath.includes(p.toLowerCase()));
           if (lineMatch || pathMatch) {
             const key = `${pattern.id}-${file.path}`;
@@ -40048,7 +40072,7 @@ var require_pr_test_advisor = __commonJS({
             }
           }
         }
-        if (file.addedCount + file.removedCount > 100 && !filePath.includes(".test.") && !filePath.includes(".spec.")) {
+        if (!nonCode && file.addedCount + file.removedCount > 100 && !filePath.includes(".test.") && !filePath.includes(".spec.")) {
           const key = `large-change-${file.path}`;
           if (!scenarioMap.has(key)) {
             scenarioMap.set(key, {
