@@ -2,6 +2,22 @@
 
 Notable changes. This is a distribution-only repo — source lives in the [casepilot monorepo](https://github.com/i-kosheliev/casepilot/tree/master/packages/github-action-qa-advisor) and is synced here on release.
 
+## v1.2.0 — 2026-04-18
+
+### Added
+
+- **3 new change patterns** (25 total, was 22):
+  - `cache-invalidation` (must-test, regression) — `cache.set/delete/clear`, `revalidatePath/revalidateTag`, `unstable_cache`, `cacheLife/cacheTag/updateTag`, `redis.set/del`, `memcache.*`. Stale cache is silent: reads look fine, writes don't propagate until TTL.
+  - `feature-flag` (should-test, edge-case) — `featureFlag`, `isEnabled`, `growthbook`, `launchDarkly`, `flagOn`, `getVariant`, `getBooleanValue`, `experiment`, `variation`, `unleash.*`, `posthog.isFeatureEnabled`. Nudges reviewer to test BOTH branches + the fallback when the flag service is unreachable.
+  - `dangerous-sink` (must-test, security) — `dangerouslySetInnerHTML`, `innerHTML`, `outerHTML`, `document.write`, `eval`, `new Function`, `setAttribute('srcdoc'`, `insertAdjacentHTML`. XSS / arbitrary code execution surface.
+
+### Tests
+
+- 6 new pr-test-advisor tests (one per new pattern + nonCode regression + secondary-trigger samples)
+- 75/75 test suite pass
+
+---
+
 ## v1.1.0 — 2026-04-17
 
 ### Added
