@@ -40015,6 +40015,52 @@ var require_pr_test_advisor = __commonJS({
         reason: "Test files were modified \u2014 verify tests are meaningful and not just passing",
         priority: "nice-to-test",
         category: "regression"
+      },
+      // ─── Environment / Deployment ───────────────────────
+      {
+        id: "env-var-usage",
+        linePatterns: ["process.env.", "Deno.env.get", "import.meta.env.", "os.environ.get", "os.getenv"],
+        scenario: "Verify new environment variables are set in every deploy target (local, preview, staging, production) \u2014 missing env vars are a common source of 500 errors after deploy",
+        reason: "New environment variable reference added \u2014 needs to be provisioned everywhere",
+        priority: "must-test",
+        category: "regression"
+      },
+      // ─── Payments / Money ───────────────────────────────
+      {
+        id: "payment-integration",
+        linePatterns: ["stripe.", "paymentIntent", "checkout.sessions", "subscriptions.create", "subscriptions.update", "price_id", "webhooks.constructEvent", "paypal.", "braintree."],
+        scenario: "Test payment flow end-to-end with test card in a staging environment \u2014 verify webhook delivery, idempotency, and correct amount in cents",
+        reason: "Payment integration code was modified \u2014 money bugs are expensive and hard to reverse",
+        priority: "must-test",
+        category: "security"
+      },
+      // ─── File System (serverless-sensitive) ─────────────
+      {
+        id: "fs-write",
+        linePatterns: ["fs.writeFile", "fs.writeFileSync", "fs.unlink", "fs.rmdir", "fs.mkdir", "fs.createWriteStream"],
+        scenario: "Verify filesystem writes work in the target runtime \u2014 serverless/edge functions have read-only filesystems except /tmp. Check that the write path is /tmp or a mounted volume",
+        reason: "Filesystem write added \u2014 may crash in serverless or read-only environments",
+        priority: "should-test",
+        category: "edge-case"
+      },
+      // ─── API Contracts ──────────────────────────────────
+      {
+        id: "graphql-schema",
+        linePatterns: ["gql`", "graphql`", "typeDefs", "buildSchema", "makeExecutableSchema"],
+        pathPatterns: [".graphql", ".gql", "schema.ts", "resolvers.ts"],
+        scenario: "Verify GraphQL schema changes are backwards-compatible \u2014 removing fields or changing types breaks existing clients. Run federation / client-codegen checks",
+        reason: "GraphQL schema or resolver was modified \u2014 contract change with possible consumer impact",
+        priority: "must-test",
+        category: "new-behavior"
+      },
+      // ─── Date / Time (flaky-test source) ────────────────
+      {
+        id: "datetime-logic",
+        linePatterns: ["new Date(", "Date.now(", "dayjs(", "moment(", "toLocaleDate", "toISOString", "getTimezoneOffset", "setHours(", "addDays(", "formatDistance"],
+        scenario: "Test date/time logic across timezones and DST boundaries \u2014 use a frozen clock in tests and verify UTC vs local time handling",
+        reason: "Date/time logic was modified \u2014 timezone and DST bugs are a classic source of flaky tests",
+        priority: "should-test",
+        category: "edge-case"
       }
     ];
     function isNonCodeFile(path) {
@@ -47171,7 +47217,8 @@ function formatComment(result, minPriority = "nice-to-test") {
   const lines = [];
   lines.push("## QA Advisor: Test Coverage Analysis");
   lines.push("");
-  lines.push(`${RISK_BADGES[result.riskLevel] || result.riskLevel} | ${result.stats.filesChanged} file(s) changed (+${result.stats.linesAdded}/-${result.stats.linesRemoved} lines)`);
+  const fileWord = result.stats.filesChanged === 1 ? "file" : "files";
+  lines.push(`${RISK_BADGES[result.riskLevel] || result.riskLevel} | ${result.stats.filesChanged} ${fileWord} changed (+${result.stats.linesAdded}/-${result.stats.linesRemoved} lines)`);
   lines.push("");
   const minIdx = PRIORITY_ORDER.indexOf(minPriority);
   const allowedPriorities = new Set(PRIORITY_ORDER.slice(0, minIdx + 1));
@@ -47195,10 +47242,11 @@ function formatComment(result, minPriority = "nice-to-test") {
     }
   }
   lines.push("---");
+  const scenarioWord = result.scenarios.length === 1 ? "scenario" : "scenarios";
   lines.push(
-    `*${result.scenarios.length} scenario(s) total \u2014 PR diff only. [Scan full repo health \u2192](https://qlens.dev)*`
+    `*${result.scenarios.length} ${scenarioWord} total \u2014 PR diff only. [Scan full repo health \u2192](https://qlens.dev?utm_source=qa-advisor&utm_medium=pr-comment&utm_campaign=cta)*`
   );
-  lines.push(`*Powered by [QA Advisor](https://iklab.dev) from IK Lab*`);
+  lines.push(`*Powered by [QA Advisor](https://iklab.dev?utm_source=qa-advisor&utm_medium=pr-comment&utm_campaign=footer) from IK Lab*`);
   lines.push(COMMENT_MARKER);
   return lines.join("\n");
 }
