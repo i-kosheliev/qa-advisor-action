@@ -40122,6 +40122,66 @@ var require_pr_test_advisor = __commonJS({
         reason: "Dangerous HTML/script sink added \u2014 untrusted data here = XSS / arbitrary code execution",
         priority: "must-test",
         category: "security"
+      },
+      // ─── Webhook signature validation ───────────────────
+      {
+        id: "webhook-signature",
+        linePatterns: [
+          "constructEvent",
+          // stripe.webhooks.constructEvent
+          "verifyWebhookSignature",
+          "x-hub-signature",
+          // GitHub
+          "x-signature-256",
+          "verify_webhook",
+          "crypto.timingSafeEqual",
+          // common pattern in webhook handlers
+          "createHmac("
+        ],
+        scenario: "Test webhook signature validation: send a request with a tampered body but a valid signature \u2192 should be rejected. Send a body with no signature header \u2192 401. Send a body with a signature for a different secret \u2192 401. Replay attacks (same nonce twice) where applicable",
+        reason: "Webhook signature verification touched \u2014 getting this wrong silently accepts forged events from anyone on the internet",
+        priority: "must-test",
+        category: "security"
+      },
+      // ─── OAuth / SSO callback ───────────────────────────
+      {
+        id: "oauth-callback",
+        linePatterns: [
+          "/oauth/callback",
+          "/auth/callback",
+          "code: ",
+          "exchangeCodeForToken",
+          "getServerSession",
+          // common NextAuth pattern
+          "signIn(",
+          "callbackUrl",
+          "state: "
+          // OAuth state param (CSRF defense)
+        ],
+        scenario: "Test the OAuth callback flow: missing state param \u2192 reject. Mismatched state \u2192 reject (CSRF). Reuse of an already-redeemed authorization code \u2192 reject. callbackUrl pointing at an external host \u2192 reject (open redirect). User cancels mid-flow (provider returns error=access_denied) \u2192 graceful UI",
+        reason: "OAuth/SSO callback handling changed \u2014 open-redirect, state-CSRF, and code-replay are the classic exploit triad here",
+        priority: "must-test",
+        category: "security"
+      },
+      // ─── Background jobs / queues ───────────────────────
+      {
+        id: "background-job",
+        linePatterns: [
+          "queue.add(",
+          "bull.add(",
+          "bullmq",
+          "sqs.sendMessage",
+          "kafka.produce",
+          "rabbitmq",
+          "publish(",
+          ".enqueue(",
+          "trigger.dev",
+          "inngest.send"
+        ],
+        scenario: "Test the job's idempotency \u2014 the same message replayed must not double-charge / double-email / double-create. Test the failure path \u2014 what happens if the worker crashes mid-job? Verify the message lands in the dead-letter queue, not the void",
+        reason: "Job enqueued \u2014 at-least-once delivery means consumers must be idempotent; without the test you'll find out in production",
+        priority: "should-test",
+        category: "edge-case"
       }
     ];
     function isNonCodeFile(path) {
@@ -47274,7 +47334,12 @@ var PRIORITY_LABELS = {
   "should-test": "Should Test",
   "nice-to-test": "Nice to Test"
 };
-function formatComment(result, minPriority = "nice-to-test") {
+var PRIORITY_BADGE = {
+  "must-test": "\u{1F534} must",
+  "should-test": "\u{1F7E1} should",
+  "nice-to-test": "\u{1F7E2} nice"
+};
+function formatComment(result, minPriority = "nice-to-test", groupBy = "priority") {
   const lines = [];
   lines.push("## QA Advisor: Test Coverage Analysis");
   lines.push("");
@@ -47287,20 +47352,10 @@ function formatComment(result, minPriority = "nice-to-test") {
   if (filtered.length === 0) {
     lines.push("No test scenarios above the configured priority threshold.");
     lines.push("");
+  } else if (groupBy === "file") {
+    renderByFile(lines, filtered);
   } else {
-    for (const priority of PRIORITY_ORDER) {
-      const group = filtered.filter((s) => s.priority === priority);
-      if (group.length === 0) continue;
-      lines.push(`### ${PRIORITY_LABELS[priority]} (${group.length})`);
-      lines.push("");
-      lines.push("| Scenario | File | Category |");
-      lines.push("|----------|------|----------|");
-      for (const scenario of group) {
-        const file = scenario.sourceFile ? `\`${scenario.sourceFile}\`` : "-";
-        lines.push(`| ${scenario.scenario} | ${file} | ${scenario.category} |`);
-      }
-      lines.push("");
-    }
+    renderByPriority(lines, filtered);
   }
   lines.push("---");
   const scenarioWord = result.scenarios.length === 1 ? "scenario" : "scenarios";
@@ -47310,6 +47365,43 @@ function formatComment(result, minPriority = "nice-to-test") {
   lines.push(`*Powered by [QA Advisor](https://iklab.dev?utm_source=qa-advisor&utm_medium=pr-comment&utm_campaign=footer) from IK Lab*`);
   lines.push(COMMENT_MARKER);
   return lines.join("\n");
+}
+function renderByPriority(lines, filtered) {
+  for (const priority of PRIORITY_ORDER) {
+    const group = filtered.filter((s) => s.priority === priority);
+    if (group.length === 0) continue;
+    lines.push(`### ${PRIORITY_LABELS[priority]} (${group.length})`);
+    lines.push("");
+    lines.push("| Scenario | File | Category |");
+    lines.push("|----------|------|----------|");
+    for (const scenario of group) {
+      const file = scenario.sourceFile ? `\`${scenario.sourceFile}\`` : "-";
+      lines.push(`| ${scenario.scenario} | ${file} | ${scenario.category} |`);
+    }
+    lines.push("");
+  }
+}
+function renderByFile(lines, filtered) {
+  const byFile = /* @__PURE__ */ new Map();
+  for (const s of filtered) {
+    const key = s.sourceFile || "(no file)";
+    const existing = byFile.get(key);
+    if (existing) existing.push(s);
+    else byFile.set(key, [s]);
+  }
+  const fileEntries = [...byFile.entries()].sort(
+    ([a], [b]) => a.localeCompare(b)
+  );
+  for (const [file, scenarios] of fileEntries) {
+    lines.push(`### \`${file}\` (${scenarios.length})`);
+    lines.push("");
+    lines.push("| Priority | Scenario | Category |");
+    lines.push("|----------|----------|----------|");
+    for (const s of scenarios) {
+      lines.push(`| ${PRIORITY_BADGE[s.priority]} | ${s.scenario} | ${s.category} |`);
+    }
+    lines.push("");
+  }
 }
 
 // src/comment-poster.ts
@@ -47348,6 +47440,8 @@ async function run() {
   try {
     const token = core.getInput("github-token", { required: true });
     const minPriority = core.getInput("min-priority") || "nice-to-test";
+    const groupByRaw = core.getInput("group-by") || "priority";
+    const groupBy = groupByRaw === "file" ? "file" : "priority";
     core.info("Fetching PR diff...");
     const { diff, title, description, prNumber } = await fetchPrDiff(token);
     if (!diff || diff.trim().length === 0) {
@@ -47364,7 +47458,7 @@ async function run() {
     core.setOutput("risk-level", result.riskLevel);
     core.setOutput("summary", result.summary);
     if (result.scenarios.length > 0) {
-      const comment = formatComment(result, minPriority);
+      const comment = formatComment(result, minPriority, groupBy);
       core.info("Posting comment to PR...");
       await postOrUpdateComment(token, prNumber, comment);
       core.info("Comment posted successfully");

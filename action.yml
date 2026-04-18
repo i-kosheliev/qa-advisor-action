@@ -1,5 +1,5 @@
 name: 'QA Advisor — PR Test Coverage Analysis'
-description: 'Automatically analyzes PR diffs and comments with test scenarios reviewers should check. 25 change patterns detected.'
+description: 'Automatically analyzes PR diffs and comments with test scenarios reviewers should check. 29 change patterns detected.'
 author: 'IK Lab'
 
 branding:
@@ -14,6 +14,10 @@ inputs:
     description: 'Minimum priority to include in comment: must-test, should-test, or nice-to-test'
     required: false
     default: 'nice-to-test'
+  group-by:
+    description: 'How to group scenarios in the comment: priority (default) or file'
+    required: false
+    default: 'priority'
 
 outputs:
   scenarios-count:
