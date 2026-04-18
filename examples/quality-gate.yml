@@ -1,0 +1,33 @@
+# Block PRs flagged HIGH risk until a senior reviewer signs off.
+# Uses the action's `risk-level` output to fail the job conditionally.
+name: QA Advisor — quality gate
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  advise:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - uses: i-kosheliev/qa-advisor-action@v1
+        id: qa
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          # show every priority — must-test scenarios drive the gate
+          min-priority: nice-to-test
+
+      - name: Block on HIGH risk
+        if: steps.qa.outputs.risk-level == 'high'
+        run: |
+          echo "::error::High-risk PR detected (${{ steps.qa.outputs.scenarios-count }} scenarios)."
+          echo "::error::Require senior reviewer sign-off before merge."
+          exit 1

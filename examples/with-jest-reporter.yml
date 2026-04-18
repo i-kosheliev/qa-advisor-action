@@ -1,0 +1,40 @@
+# Combine the QA Advisor PR comment with the @qlens/jest-reporter
+# CI ingest — get scenarios on the PR and runs aggregated on the dashboard.
+name: Tests + QA Advisor
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm test
+        env:
+          # @qlens/jest-reporter posts each run to https://qlens.dev/api/v1/test-runs
+          # Get a key at https://www.qlens.dev/dashboard/keys (Pro+).
+          QLENS_API_KEY: ${{ secrets.QLENS_API_KEY }}
+
+  advise:
+    runs-on: ubuntu-latest
+    needs: test
+    if: always()   # also run if tests failed — reviewers want scenarios either way
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: i-kosheliev/qa-advisor-action@v1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          min-priority: should-test   # show only must + should
